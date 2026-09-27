@@ -5,31 +5,25 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
-
-concurrency: release
+  contents: read
 
 jobs:
-  release:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           python-version: '3.12'
-      # Also checks that all four manifests declare the same version.
       - run: uv run --no-project python -m unittest discover -s tests -v
-      - name: Tag and release if the version is new
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tag="v$(jq -r .version .claude-plugin/plugin.json)"
-          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-            echo "$tag already released, nothing to do"
-            exit 0
-          fi
-          prev=$(git tag --list 'v*' --sort=-v:refname | head -1)
-          git log --no-merges --pretty='- %s' "${prev:+$prev..}HEAD" > notes.md
-          gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --notes-file notes.md
+
+  release-please:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # Opens/updates a release PR that bumps every plugin.json and CHANGELOG.md;
+      # merging that PR tags vX.Y.Z and publishes the GitHub release.
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
