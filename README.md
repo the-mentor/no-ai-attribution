@@ -21,6 +21,8 @@ A tiny hook plugin that stops AI coding agents from stamping
 
 ## ✨ What it looks like
 
+<p align="center"><img src="demo/demo.gif" alt="Terminal demo: a commit with an AI co-author trailer is blocked, the retry without it goes through" width="800"></p>
+
 Your agent tries to sneak a footer into a commit:
 
 ```console
