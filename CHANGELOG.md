@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.4...v0.2.5) (2026-09-27)
+
+
+### Bug Fixes
+
+* verify release PR contents before auto-merge and pin the merge to the checked commit ([#10](https://github.com/the-mentor/no-ai-attribution/issues/10)) ([9c13dad](https://github.com/the-mentor/no-ai-attribution/commit/9c13dad4457afc08aff91e4334dcae529edb15b4))
+
 ## [0.2.4](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.3...v0.2.4) (2026-09-27)
 
 
