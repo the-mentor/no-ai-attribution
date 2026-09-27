@@ -156,6 +156,12 @@ untouched.
 ## 🧪 Development
 
 ```bash
+uv run --no-project python -m unittest discover -s tests
+```
+
+or, without uv:
+
+```bash
 python3 -m unittest discover -s tests
 ```
 
