@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.2...v0.2.3) (2026-09-27)
+
+
+### Bug Fixes
+
+* skip release PR approval when release-please leaves the PR unchanged ([#6](https://github.com/the-mentor/no-ai-attribution/issues/6)) ([a8ccec9](https://github.com/the-mentor/no-ai-attribution/commit/a8ccec9373e0e707e5b747c752ce9ea41f399481))
+
 ## [0.2.2](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.1...v0.2.2) (2026-09-27)
 
 
