@@ -12,14 +12,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           python-version: '3.12'
-      - run: python3 -m unittest discover -s tests -v
+      - run: uv run --no-project python -m unittest discover -s tests -v
       - name: Check tag matches manifest versions
         run: |
           for f in .claude-plugin/plugin.json .codex-plugin/plugin.json .github/plugin/plugin.json .qoder-plugin/plugin.json; do
-            v=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['version'])" "$f")
+            v=$(uv run --no-project python -c "import json,sys; print(json.load(open(sys.argv[1]))['version'])" "$f")
             [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "::error file=$f::version $v does not match tag $GITHUB_REF_NAME"; exit 1; }
           done
       - run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag

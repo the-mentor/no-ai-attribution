@@ -64,7 +64,7 @@ Uses `.qoder-plugin/plugin.json` and `hooks/qoder-hooks.json`.
 ## Test
 
 ```bash
-python3 -m unittest discover -s tests
+uv run --no-project python -m unittest discover -s tests   # or: python3 -m unittest discover -s tests
 ```
 
 ## How it works
