@@ -167,6 +167,16 @@ python3 -m unittest discover -s tests
 
 Every bypass ever found has a regression test.
 
+## ⭐ Star history
+
+<a href="https://star-history.com/#the-mentor/no-ai-attribution&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=the-mentor/no-ai-attribution&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=the-mentor/no-ai-attribution&type=Date" />
+    <img alt="Star history chart" src="https://api.star-history.com/svg?repos=the-mentor/no-ai-attribution&type=Date" />
+  </picture>
+</a>
+
 ## 📄 License
 
 [MIT](LICENSE) © Avri Chen-Roth
