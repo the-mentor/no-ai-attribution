@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.9](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.8...v0.2.9) (2026-09-27)
+
+
+### Bug Fixes
+
+* block Copilot, Cursor, Gemini, and Aider attribution trailers ([#23](https://github.com/the-mentor/no-ai-attribution/issues/23)) ([0336ca1](https://github.com/the-mentor/no-ai-attribution/commit/0336ca1b53e65141d916af8a512d9fa02dc19260))
+
 ## [0.2.8](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.7...v0.2.8) (2026-09-27)
 
 
