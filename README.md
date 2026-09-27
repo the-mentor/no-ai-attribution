@@ -77,3 +77,15 @@ message telling Claude to strip the attribution and retry.
 
 Non-matching commands (anything that isn't a commit/PR/issue write) pass
 through untouched.
+
+## Releasing
+
+1. Bump `version` in all four manifests (`.claude-plugin/`, `.codex-plugin/`,
+   `.github/plugin/`, `.qoder-plugin/` `plugin.json`) and commit.
+2. Tag and push:
+   ```bash
+   git tag v0.3.0 && git push origin main v0.3.0
+   ```
+
+The `release` workflow runs the tests, checks the tag matches every manifest
+version, and publishes a GitHub release with generated notes.
