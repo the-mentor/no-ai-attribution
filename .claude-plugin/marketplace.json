@@ -1,10 +1,11 @@
 {
   "name": "achenroth-plugins",
+  "description": "Personal plugin marketplace for Avri Chen-Roth.",
   "owner": { "name": "Avri Chen-Roth" },
   "plugins": [
     {
       "name": "no-ai-attribution",
-      "source": { "source": "local", "path": "." }
+      "source": "./"
     }
   ]
 }
