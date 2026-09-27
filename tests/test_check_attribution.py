@@ -79,6 +79,16 @@ class CheckAttribution(unittest.TestCase):
                 "gh release create v1 --notes-file msg.txt",
                 "gh api repos/o/r/issues -F body=@msg.txt",
             ]
+            # The file only exists in the directory the command switches to.
+            sub = Path(d) / "sub"
+            sub.mkdir()
+            (sub / "only-here.txt").write_text(f"fix\n\n{TRAILER}\n")
+            blocked += [
+                f"cd {sub} && git commit -F only-here.txt",
+                "cd sub && git commit -F only-here.txt",
+                f"git -C {sub} commit -F only-here.txt",
+                f"cd {d} && cd sub && git commit -F only-here.txt",
+            ]
             allowed = ["git commit -F clean.md", "git commit -F missing.txt"]
             for cmd in blocked:
                 with self.subTest(cmd=cmd):

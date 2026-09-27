@@ -34,24 +34,33 @@ MCP_READ = {"get", "list", "read", "search"}
 MAX_FILE_BYTES = 1_000_000
 
 
-def referenced_files(command):
-    """Paths the command reads its message from (`-F msg.txt`, `body=@file`)."""
+def referenced_files(command, cwd):
+    """(directory, path) pairs for the files the command reads its message from
+    (`-F msg.txt`, `body=@file`). Tracks `cd` and `git -C` so relative paths
+    resolve where the command actually runs."""
     try:
         tokens = shlex.split(command)
     except ValueError:
         tokens = command.split()
-    paths = []
+    dirs, found = [cwd], []
     for i, tok in enumerate(tokens):
-        if tok in FILE_FLAGS and i + 1 < len(tokens):
-            paths.append(tokens[i + 1])
-        elif tok.startswith("--") and "=" in tok and tok.split("=", 1)[0] in FILE_FLAGS:
-            paths.append(tok.split("=", 1)[1])
+        nxt = tokens[i + 1] if i + 1 < len(tokens) else ""
+        if nxt and (tok == "cd" or (tok == "-C" and "git" in tokens[:i])):
+            dirs.append(os.path.join(dirs[-1], os.path.expanduser(nxt)))
+        if tok in FILE_FLAGS:
+            path = nxt
+        elif tok.startswith("--") and tok.split("=", 1)[0] in FILE_FLAGS:
+            path = tok.split("=", 1)[1]
         elif "=@" in tok:
-            paths.append(tok.split("=@", 1)[1])
-    return [p for p in paths if p and p != "-"]
+            path = tok.split("=@", 1)[1]
+        else:
+            continue
+        if path and path != "-":
+            found += [(d, path) for d in dirs]
+    return found
 
 
-def read(path, cwd):
+def read(cwd, path):
     try:
         with open(os.path.join(cwd, os.path.expanduser(path)), errors="ignore") as f:
             return f.read(MAX_FILE_BYTES)
@@ -83,7 +92,7 @@ def text_to_check(data, args):
     if not isinstance(command, str) or not COMMIT_LIKE.search(command):
         return None
     cwd = str(data.get("cwd") or os.getcwd())
-    return "\n".join([command] + [read(p, cwd) for p in referenced_files(command)])
+    return "\n".join([command] + [read(d, p) for d, p in referenced_files(command, cwd)])
 
 
 def main():
