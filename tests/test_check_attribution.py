@@ -189,6 +189,13 @@ class CheckAttribution(unittest.TestCase):
         }
         self.assertEqual(run(None, payload).returncode, 2)
 
+    def test_readme_shows_the_real_block_message(self):
+        r = run_tool("Bash", {"command": f'git commit -m "{TRAILER}"'})
+        message = json.loads(r.stderr)["systemMessage"]
+        readme = (ROOT / "README.md").read_text()
+        shown = readme.split("⛔ ", 1)[1].split("\n```", 1)[0]
+        self.assertEqual(" ".join(shown.split()), message)
+
     def test_manifest_versions_match(self):
         versions = {
             p: json.loads((ROOT / p / "plugin.json").read_text())["version"]
