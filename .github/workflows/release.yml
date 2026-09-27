@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           python-version: '3.12'
@@ -37,24 +39,23 @@ jobs:
         id: release
         with:
           token: ${{ steps.app-token.outputs.token }}
-      # Only merge if the PR was opened by this app and touches nothing but
-      # version bumps and the changelog.
+      # Only merge if the PR was opened by this app and only bumps versions and
+      # prepends to CHANGELOG.md. The merge is pinned to the commit checked.
+      - if: steps.release.outputs.prs_created == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - if: steps.release.outputs.prs_created == 'true'
         run: |
-          author=$(gh pr view "$BRANCH" --json author -q .author.login)
+          read -r author sha < <(gh pr view "$BRANCH" --json author,headRefOid -q '"\(.author.login) \(.headRefOid)"')
           if [ "$author" != "app/$APP_SLUG" ]; then
             echo "::error::release PR opened by $author, not app/$APP_SLUG; not merging"
             exit 1
           fi
-          unexpected=$(gh pr view "$BRANCH" --json files -q '.files[].path' | grep -vxF -f <(printf '%s\n' \
-            .claude-plugin/plugin.json .codex-plugin/plugin.json .github/plugin/plugin.json \
-            .qoder-plugin/plugin.json .release-please-manifest.json CHANGELOG.md) || true)
-          if [ -n "$unexpected" ]; then
-            echo "::error::release PR changes unexpected files, not merging:"
-            echo "$unexpected"
-            exit 1
-          fi
-          gh pr merge "$BRANCH" --squash --admin
+          git fetch --no-tags origin "$sha"
+          python3 .github/scripts/check_release_pr.py origin/main "$sha"
+          gh pr merge "$BRANCH" --squash --admin --match-head-commit "$sha"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
