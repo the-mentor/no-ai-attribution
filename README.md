@@ -15,9 +15,18 @@ remember to skip the default every single time. This plugin enforces it
 deterministically via a `PreToolUse` hook, independent of any per-session
 instructions.
 
-## Install
+## Requirements
 
-Requires `python3` on your PATH.
+- **Python 3** available as `python3` on your PATH (including the
+  non-interactive shell your agent runs hooks in, e.g. for pyenv/Nix users).
+  The hook script uses only the standard library, so there's nothing to
+  `pip install`.
+
+If `python3` is missing, the hook fails to run. Depending on the agent, that
+either silently leaves commits unchecked (e.g. Claude Code, Qoder) or blocks
+every shell command (Copilot CLI fails closed on hook errors).
+
+## Install
 
 **Claude Code** (send as two separate prompts):
 ```
