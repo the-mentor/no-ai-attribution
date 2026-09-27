@@ -2,8 +2,9 @@
 
 Works with **Claude Code** and **OpenAI Codex CLI**. Blocks `git commit`,
 `gh pr create/edit`, and `gh issue create/edit` commands whose message text
-mentions Claude, Anthropic, or AI-assistance attribution (e.g.
-`Co-Authored-By: Claude ...`, "🤖 Generated with Claude Code" footers).
+mentions Claude, Anthropic, Codex, or AI-assistance attribution (e.g.
+`Co-Authored-By: Claude ...`, `Co-Authored-By: Codex ...`, "🤖 Generated
+with Claude Code" / "Generated with Codex" footers).
 
 ## Why
 

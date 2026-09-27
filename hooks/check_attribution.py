@@ -11,11 +11,15 @@ COMMIT_LIKE = re.compile(
 )
 ATTRIBUTION = re.compile(
     r"co-authored-by:\s*claude"
+    r"|co-authored-by:\s*codex"
     r"|generated with \[?claude"
+    r"|generated with \[?codex"
     r"|claude\.com/claude-code"
     r"|\banthropic\b"
     r"|\bclaude code\b"
-    r"|noreply@anthropic\.com",
+    r"|\bopenai codex\b"
+    r"|noreply@anthropic\.com"
+    r"|noreply@openai\.com",
     re.IGNORECASE,
 )
 
@@ -29,9 +33,9 @@ def main():
 
     if ATTRIBUTION.search(command):
         message = (
-            "Blocked: this command mentions Claude/Anthropic attribution, which "
-            "the user's global CLAUDE.md forbids in commits, PRs, and issues. "
-            "Remove the attribution line/footer and retry."
+            "Blocked: this command mentions Claude/Anthropic/Codex attribution, "
+            "which is not allowed in commits, PRs, and issues. Remove the "
+            "attribution line/footer and retry."
         )
         print(
             json.dumps(
