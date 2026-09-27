@@ -1,0 +1,14 @@
+{
+  "name": "no-ai-attribution",
+  "version": "0.2.0",
+  "description": "Blocks git commits and GitHub PR/issue commands that mention Claude, Anthropic, Codex, or AI-assistance attribution.",
+  "author": {
+    "name": "Avri Chen-Roth",
+    "url": "https://github.com/the-mentor"
+  },
+  "homepage": "https://github.com/the-mentor/no-ai-attribution",
+  "repository": "https://github.com/the-mentor/no-ai-attribution",
+  "license": "MIT",
+  "keywords": ["git", "attribution", "hooks"],
+  "hooks": "hooks/copilot-hooks.json"
+}

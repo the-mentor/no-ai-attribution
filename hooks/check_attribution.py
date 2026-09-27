@@ -26,7 +26,15 @@ ATTRIBUTION = re.compile(
 
 def main():
     data = json.load(sys.stdin)
-    command = data.get("tool_input", {}).get("command", "")
+    # Claude Code / Codex / Qoder send tool_input; Copilot CLI sends toolArgs
+    # (possibly as a JSON string).
+    args = data.get("tool_input") or data.get("toolArgs") or {}
+    if isinstance(args, str):
+        try:
+            args = json.loads(args)
+        except ValueError:
+            args = {"command": args}
+    command = args.get("command", "") if isinstance(args, dict) else ""
 
     if not command or not COMMIT_LIKE.search(command):
         return 0
@@ -37,6 +45,12 @@ def main():
             "which is not allowed in commits, PRs, and issues. Remove the "
             "attribution line/footer and retry."
         )
+        if "toolArgs" in data:  # Copilot CLI reads the decision from stdout
+            print(
+                json.dumps(
+                    {"permissionDecision": "deny", "permissionDecisionReason": message}
+                )
+            )
         print(
             json.dumps(
                 {

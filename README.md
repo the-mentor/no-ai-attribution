@@ -1,6 +1,6 @@
 # no-ai-attribution
 
-Works with **Claude Code** and **OpenAI Codex CLI**. Blocks `git commit`,
+Works with **Claude Code**, **OpenAI Codex CLI**, **GitHub Copilot CLI**, and **Qoder**. Blocks `git commit`,
 `gh pr create/edit`, and `gh issue create/edit` commands whose message text
 mentions Claude, Anthropic, Codex, or AI-assistance attribution (e.g.
 `Co-Authored-By: Claude ...`, `Co-Authored-By: Codex ...`, "🤖 Generated
@@ -37,6 +37,20 @@ codex plugin add no-ai-attribution@no-ai-attribution
 Codex reuses the same `hooks/hooks.json` schema (and sets
 `CLAUDE_PLUGIN_ROOT` for compatibility). Non-managed plugin hooks require a
 one-time trust review in Codex (`/hooks`) before they run.
+
+**GitHub Copilot CLI:**
+```bash
+copilot plugin marketplace add the-mentor/no-ai-attribution
+copilot plugin install no-ai-attribution@no-ai-attribution
+```
+Uses `.github/plugin/plugin.json` and `hooks/copilot-hooks.json`.
+
+**Qoder CLI:**
+```bash
+git clone https://github.com/the-mentor/no-ai-attribution
+qoder plugins install ./no-ai-attribution
+```
+Uses `.qoder-plugin/plugin.json` and `hooks/qoder-hooks.json`.
 
 ## Test
 

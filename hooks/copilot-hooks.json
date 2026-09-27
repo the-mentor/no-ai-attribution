@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "matcher": "bash",
+        "bash": "python3 \"${PLUGIN_ROOT}/hooks/check_attribution.py\"",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
