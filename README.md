@@ -30,9 +30,9 @@ $ git commit -m "fix login redirect" -m "Co-Authored-By: Claude <noreply@anthrop
 The hook catches it before the command ever runs:
 
 ```text
-⛔ Blocked: this command mentions Claude/Anthropic/Codex attribution, which is
-   not allowed in commits, PRs, and issues. Remove the attribution line/footer
-   and retry.
+⛔ Blocked: this command contains AI-assistant attribution (e.g. a
+   Co-authored-by trailer or 'Generated with' footer), which is not allowed
+   in commits, PRs, and issues. Remove the attribution and retry.
 ```
 
 The agent reads that, drops the footer, and commits again. You get a clean

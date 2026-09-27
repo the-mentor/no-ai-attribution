@@ -119,9 +119,9 @@ def main():
         return 0
 
     message = (
-        "Blocked: this command mentions Claude/Anthropic/Codex attribution, "
-        "which is not allowed in commits, PRs, and issues. Remove the "
-        "attribution line/footer and retry."
+        "Blocked: this command contains AI-assistant attribution (e.g. a "
+        "Co-authored-by trailer or 'Generated with' footer), which is not "
+        "allowed in commits, PRs, and issues. Remove the attribution and retry."
     )
     if "toolArgs" in data:  # Copilot CLI reads the decision from stdout
         print(json.dumps({"permissionDecision": "deny", "permissionDecisionReason": message}))
