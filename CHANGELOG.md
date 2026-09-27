@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.5...v0.2.6) (2026-09-27)
+
+
+### Bug Fixes
+
+* close hook bypasses (git options, message files, gh comment/release/api, GitHub MCP tools) ([#13](https://github.com/the-mentor/no-ai-attribution/issues/13)) ([ff49cc8](https://github.com/the-mentor/no-ai-attribution/commit/ff49cc8f4036acb2ff4b88e7357d2c81441ee936))
+
 ## [0.2.5](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.4...v0.2.5) (2026-09-27)
 
 
