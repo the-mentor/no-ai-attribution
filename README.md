@@ -171,6 +171,12 @@ Every bypass ever found has a regression test.
 
 [MIT](LICENSE) © Avri Chen-Roth
 
+<div align="center">
+
+**If this saved your git history, drop a ⭐. It helps others find it.**
+
+</div>
+
 ## ⭐ Star history
 
 <a href="https://star-history.com/#the-mentor/no-ai-attribution&Date">
@@ -180,9 +186,3 @@ Every bypass ever found has a regression test.
     <img alt="Star history chart" src="https://api.star-history.com/svg?repos=the-mentor/no-ai-attribution&type=Date" />
   </picture>
 </a>
-
-<div align="center">
-
-**If this saved your git history, drop a ⭐. It helps others find it.**
-
-</div>
