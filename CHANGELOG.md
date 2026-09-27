@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.8](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.7...v0.2.8) (2026-09-27)
+
+
+### Bug Fixes
+
+* read message files when the path is followed by a shell separator ([#17](https://github.com/the-mentor/no-ai-attribution/issues/17)) ([1d70a5f](https://github.com/the-mentor/no-ai-attribution/commit/1d70a5f0012fb020d72b29b7838658fa9792916e))
+
 ## [0.2.7](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.6...v0.2.7) (2026-09-27)
 
 
