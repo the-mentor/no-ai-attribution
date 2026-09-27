@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.10](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.9...v0.2.10) (2026-09-27)
+
+
+### Bug Fixes
+
+* make the block message agent-neutral ([#25](https://github.com/the-mentor/no-ai-attribution/issues/25)) ([922f45c](https://github.com/the-mentor/no-ai-attribution/commit/922f45cd58516ef55bdd7a08ffed848ee75ba2b7))
+
 ## [0.2.9](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.8...v0.2.9) (2026-09-27)
 
 
