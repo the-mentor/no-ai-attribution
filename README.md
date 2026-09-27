@@ -5,8 +5,8 @@
 **Your commits. Your name. No robot footers.**
 
 A tiny hook plugin that stops AI coding agents from stamping
-`Co-Authored-By: Claude` trailers and *"🤖 Generated with …"* footers
-into your git history, pull requests, and issues.
+`Co-Authored-By: Claude` / `Copilot` / `Cursor` trailers and
+*"🤖 Generated with …"* footers into your git history, pull requests, and issues.
 
 [![Latest release](https://img.shields.io/github/v/release/the-mentor/no-ai-attribution?label=release&color=blue)](https://github.com/the-mentor/no-ai-attribution/releases/latest)
 [![License: MIT](https://img.shields.io/github/license/the-mentor/no-ai-attribution?color=green)](LICENSE)
@@ -64,9 +64,20 @@ agent was told or forgot.
 | **Message files** | `-F msg.txt`, `--file`, `--body-file`, `--notes-file`, `field=@file`. It reads the file, following any `cd` in the command |
 | **GitHub MCP tools** | Any GitHub MCP write tool (create PR, comment, push files…). Every text argument is checked |
 
-**Patterns it blocks:** `Co-Authored-By: Claude` / `Codex`, *"Generated with
-Claude Code / Codex"*, `claude.com/claude-code` links, `noreply@anthropic.com`,
-`noreply@openai.com`, and mentions of Anthropic, Claude Code, or OpenAI Codex.
+**Patterns it blocks:**
+
+| Agent | What gets caught |
+|---|---|
+| **Claude Code** | `Co-Authored-By: Claude`, *"Generated with Claude Code"*, `claude.com/claude-code`, `noreply@anthropic.com`, mentions of Anthropic or Claude Code |
+| **OpenAI Codex** | `Co-Authored-By: Codex`, *"Generated with Codex"*, `noreply@openai.com`, mentions of OpenAI Codex |
+| **GitHub Copilot** | `Co-authored-by: Copilot`, and its `Copilot@users.noreply.github.com`, `Copilot[bot]@users.noreply.github.com`, and `copilot@github.com` addresses |
+| **Cursor** | `Co-authored-by: Cursor`, `cursoragent@cursor.com` |
+| **Gemini** | `Co-authored-by: Gemini`, `gemini-code-assist[bot]` |
+| **Aider** | `Co-authored-by: aider`, `noreply@aider.chat` |
+
+For Copilot, Cursor, Gemini, and Aider, the name only counts as a
+co-author trailer, so ordinary commits like *"fix Cursor keybinding"* or
+*"bump gemini SDK"* go through.
 
 ## 🚀 Install
 
