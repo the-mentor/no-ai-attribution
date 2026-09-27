@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.3...v0.2.4) (2026-09-27)
+
+
+### Features
+
+* open and auto-merge release PRs as the release GitHub App ([#8](https://github.com/the-mentor/no-ai-attribution/issues/8)) ([55606c2](https://github.com/the-mentor/no-ai-attribution/commit/55606c252f61dd2d808e877a80551764341988e5))
+
 ## [0.2.3](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.2...v0.2.3) (2026-09-27)
 
 
