@@ -30,15 +30,14 @@ jobs:
         id: release
       # Approve the release PR as the release app (a PR's author can't approve
       # it). Re-runs after every push, since new commits dismiss approvals.
-      - if: steps.release.outputs.pr
+      - if: steps.release.outputs.prs_created == 'true'
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
           app-id: ${{ vars.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_KEY }}
           permission-pull-requests: write
-      - if: steps.release.outputs.pr
-        run: gh pr review "$PR" --approve --repo "$GITHUB_REPOSITORY"
+      - if: steps.release.outputs.prs_created == 'true'
+        run: gh pr review release-please--branches--main --approve --repo "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PR: ${{ fromJSON(steps.release.outputs.pr).number }}
