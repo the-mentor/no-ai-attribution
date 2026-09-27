@@ -8,13 +8,29 @@ permissions:
 
 jobs:
   test:
-    name: Unit tests
+    name: Unit tests (${{ matrix.python }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every CPython version still supported upstream:
+        # https://devguide.python.org/versions/
+        python: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python }}
       - run: uv run --no-project python -m unittest discover -s tests -v
+
+  # The single check the ruleset requires. Passes only if every version above
+  # passed, so adding or dropping a version never needs a ruleset change.
+  all-tests:
+    name: Unit tests
+    if: always()
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - run: '[ "${{ needs.test.result }}" = success ]'

@@ -81,7 +81,7 @@ co-author trailer, so ordinary commits like *"fix Cursor keybinding"* or
 
 ## 🚀 Install
 
-> **Needs:** `python3` on your `PATH`, including the non-interactive shell your
+> **Needs:** `python3` (3.10 or newer) on your `PATH`, including the non-interactive shell your
 > agent uses (pyenv/Nix users, double-check this one).
 
 <details open>
