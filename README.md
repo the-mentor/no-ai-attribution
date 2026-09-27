@@ -80,12 +80,10 @@ through untouched.
 
 ## Releasing
 
-1. Bump `version` in all four manifests (`.claude-plugin/`, `.codex-plugin/`,
-   `.github/plugin/`, `.qoder-plugin/` `plugin.json`) and commit.
-2. Tag and push:
-   ```bash
-   git tag v0.3.0 && git push origin main v0.3.0
-   ```
+Bump `version` in all four manifests (`.claude-plugin/`, `.codex-plugin/`,
+`.github/plugin/`, `.qoder-plugin/` `plugin.json`) and merge to `main`.
 
-The `release` workflow runs the tests, checks the tag matches every manifest
-version, and publishes a GitHub release with generated notes.
+The `release` workflow runs on every push to `main`. When the version has no
+tag yet, it runs the tests, creates the `vX.Y.Z` tag, and publishes a GitHub
+release listing the commits since the previous tag. Pushes that don't change
+the version do nothing.
