@@ -64,7 +64,7 @@ Uses `.qoder-plugin/plugin.json` and `hooks/qoder-hooks.json`.
 ## Test
 
 ```bash
-uv run --no-project python -m unittest discover -s tests   # or: python3 -m unittest discover -s tests
+python3 -m unittest discover -s tests
 ```
 
 ## How it works
@@ -78,12 +78,3 @@ message telling Claude to strip the attribution and retry.
 Non-matching commands (anything that isn't a commit/PR/issue write) pass
 through untouched.
 
-## Releasing
-
-Bump `version` in all four manifests (`.claude-plugin/`, `.codex-plugin/`,
-`.github/plugin/`, `.qoder-plugin/` `plugin.json`) and merge to `main`.
-
-The `release` workflow runs on every push to `main`. When the version has no
-tag yet, it runs the tests, creates the `vX.Y.Z` tag, and publishes a GitHub
-release listing the commits since the previous tag. Pushes that don't change
-the version do nothing.
