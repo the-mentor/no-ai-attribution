@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.7](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.6...v0.2.7) (2026-09-27)
+
+
+### Bug Fixes
+
+* resolve message files relative to cd and git -C targets ([#15](https://github.com/the-mentor/no-ai-attribution/issues/15)) ([a64dcc5](https://github.com/the-mentor/no-ai-attribution/commit/a64dcc5ce534fa00ae0d1cc5f23f4cfc2ca5069e))
+
 ## [0.2.6](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.5...v0.2.6) (2026-09-27)
 
 
