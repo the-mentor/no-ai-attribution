@@ -1,6 +1,6 @@
 {
   "name": "no-ai-attribution",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "displayName": "No AI Attribution",
   "description": "Blocks git commits and GitHub PR/issue commands that mention Claude, Anthropic, Codex, or AI-assistance attribution.",
   "author": {
