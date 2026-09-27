@@ -1,9 +1,8 @@
-name: test
+name: ci
 
 on:
   push:
-    branches: [main]
-  pull_request:
+    branches: ['**']
 
 permissions:
   contents: read
