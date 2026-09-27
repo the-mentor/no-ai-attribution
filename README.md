@@ -28,11 +28,16 @@ every shell command (Copilot CLI fails closed on hook errors).
 
 ## Install
 
-**Claude Code** (send as two separate prompts):
-```
-/plugin marketplace add the-mentor/no-ai-attribution
-/plugin install no-ai-attribution@no-ai-attribution
-```
+**Claude Code** — run these one at a time, as two separate prompts:
+
+1. Add the marketplace:
+   ```
+   /plugin marketplace add the-mentor/no-ai-attribution
+   ```
+2. Install the plugin:
+   ```
+   /plugin install no-ai-attribution@no-ai-attribution
+   ```
 or for local testing:
 ```
 claude --plugin-dir /path/to/no-ai-attribution
