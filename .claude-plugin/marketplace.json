@@ -1,0 +1,10 @@
+{
+  "name": "achenroth-plugins",
+  "owner": { "name": "Avri Chen-Roth" },
+  "plugins": [
+    {
+      "name": "no-ai-attribution",
+      "source": { "source": "local", "path": "." }
+    }
+  ]
+}
