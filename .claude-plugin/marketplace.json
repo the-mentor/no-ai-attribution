@@ -1,11 +1,17 @@
 {
-  "name": "achenroth-plugins",
-  "description": "Personal plugin marketplace for Avri Chen-Roth.",
-  "owner": { "name": "Avri Chen-Roth" },
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "no-ai-attribution",
+  "description": "Marketplace for the no-ai-attribution plugin.",
+  "owner": {
+    "name": "Avri Chen-Roth",
+    "url": "https://github.com/the-mentor"
+  },
   "plugins": [
     {
       "name": "no-ai-attribution",
-      "source": "./"
+      "source": "./",
+      "description": "Blocks git commits and GitHub PR/issue commands that mention Claude, Anthropic, Codex, or AI-assistance attribution.",
+      "category": "security"
     }
   ]
 }

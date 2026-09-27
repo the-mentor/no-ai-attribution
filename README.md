@@ -17,20 +17,32 @@ instructions.
 
 ## Install
 
-**Claude Code:**
+Requires `python3` on your PATH.
+
+**Claude Code** (send as two separate prompts):
 ```
-/plugin install no-ai-attribution
+/plugin marketplace add the-mentor/no-ai-attribution
+/plugin install no-ai-attribution@no-ai-attribution
 ```
 or for local testing:
 ```
-cc --plugin-dir /path/to/no-ai-attribution
+claude --plugin-dir /path/to/no-ai-attribution
 ```
 
-**Codex CLI:** install the plugin per Codex's plugin install flow, or point
-Codex at this directory as a local plugin. Codex reuses the same
-`hooks/hooks.json` schema (and sets `CLAUDE_PLUGIN_ROOT` for compatibility),
-discovered via `.codex-plugin/plugin.json`. Note: non-managed plugin hooks
-require a one-time trust review in Codex (`/hooks`) before they run.
+**Codex CLI:**
+```bash
+codex plugin marketplace add the-mentor/no-ai-attribution
+codex plugin add no-ai-attribution@no-ai-attribution
+```
+Codex reuses the same `hooks/hooks.json` schema (and sets
+`CLAUDE_PLUGIN_ROOT` for compatibility). Non-managed plugin hooks require a
+one-time trust review in Codex (`/hooks`) before they run.
+
+## Test
+
+```bash
+python3 -m unittest discover -s tests
+```
 
 ## How it works
 
