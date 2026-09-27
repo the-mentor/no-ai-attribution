@@ -16,8 +16,13 @@ COMMIT_LIKE = re.compile(
     r"|release\s+(?:create|edit)|api)\b"
 )
 ATTRIBUTION = re.compile(
-    r"co-authored-by:\s*claude"
-    r"|co-authored-by:\s*codex"
+    # Agent names only count as a co-author trailer, so "fix Cursor bug" passes.
+    r"co-authored-by:\s*(?:claude|codex|copilot|cursor|gemini|aider)\b"
+    r"|\bcopilot(?:\[bot\])?@users\.noreply\.github\.com"
+    r"|\bcopilot@github\.com"
+    r"|\bcursoragent@cursor\.com"
+    r"|\bgemini-code-assist\[bot\]"
+    r"|noreply@aider\.chat"
     r"|generated with \[?claude"
     r"|generated with \[?codex"
     r"|claude\.com/claude-code"

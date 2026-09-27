@@ -124,6 +124,43 @@ class CheckAttribution(unittest.TestCase):
             with self.subTest(tool=tool):
                 self.assertEqual(run_tool(tool, args).returncode, 0)
 
+    def test_blocks_other_agents(self):
+        cab = "Co-authored-by: "
+        for trailer in [
+            # Copilot CLI / SDK / GitHub Desktop
+            cab + "Copilot <223556219+Copilot@users.noreply" + ".github.com>",
+            # VS Code Copilot
+            cab + "Copilot <copilot@" + "github.com>",
+            # Copilot coding agent
+            cab + "Copilot <198982749+Copilot[bot]@users.noreply" + ".github.com>",
+            # Cursor
+            cab + "Cursor <cursoragent@" + "cursor.com>",
+            # Gemini
+            cab + "gemini-code-assist[bot] <176961590+gemini-code-assist[bot]@users.noreply.github.com>",
+            cab + "Gemini <gemini@google.com>",
+            # Aider (opt-in trailer)
+            cab + "aider (gpt-4o) <noreply@aider.chat>",
+            # Bare addresses, lower case, and extra spaces
+            "cursoragent@" + "cursor.com",
+            "co-authored-by:   " + "copilot",
+        ]:
+            with self.subTest(trailer=trailer):
+                cmd = f'git commit -m "fix" -m "{trailer}"'
+                self.assertEqual(run_tool("Bash", {"command": cmd}).returncode, 2)
+
+    def test_allows_agent_names_in_normal_messages(self):
+        for msg in [
+            "fix Cursor keybinding",
+            "bump gemini SDK to 2.0",
+            "document the Copilot integration",
+            "add aider config example",
+            "Co-authored-by: Jane Doe <jane@example.com>",
+            "Co-authored-by: Copilotta Smith <c.smith@example.com>",
+        ]:
+            with self.subTest(msg=msg):
+                cmd = f'git commit -m "{msg}"'
+                self.assertEqual(run_tool("Bash", {"command": cmd}).returncode, 0)
+
     def test_ignores_reads_and_pipes(self):
         for cmd in [
             "gh api repos/o/r/pulls",
