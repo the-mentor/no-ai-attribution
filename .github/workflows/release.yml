@@ -20,24 +20,43 @@ jobs:
   release-please:
     needs: test
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
-      # Opens/updates a release PR that bumps every plugin.json and CHANGELOG.md;
-      # merging that PR tags vX.Y.Z and publishes the GitHub release.
-      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
-        id: release
-      # Approve the release PR as the release app (a PR's author can't approve
-      # it). Re-runs after every push, since new commits dismiss approvals.
-      - if: steps.release.outputs.prs_created == 'true'
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+      # Everything below runs as the release app: its PRs and merges trigger
+      # workflows (GITHUB_TOKEN's don't), and it's the only author allowed to
+      # auto-merge. Merging relies on the app being a ruleset bypass actor.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
           app-id: ${{ vars.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_KEY }}
+          permission-contents: write
           permission-pull-requests: write
+      # Opens/updates a release PR that bumps every plugin.json and CHANGELOG.md;
+      # merging that PR tags vX.Y.Z and publishes the GitHub release.
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+      # Only merge if the PR was opened by this app and touches nothing but
+      # version bumps and the changelog.
       - if: steps.release.outputs.prs_created == 'true'
-        run: gh pr review release-please--branches--main --approve --repo "$GITHUB_REPOSITORY"
+        run: |
+          author=$(gh pr view "$BRANCH" --json author -q .author.login)
+          if [ "$author" != "app/$APP_SLUG" ]; then
+            echo "::error::release PR opened by $author, not app/$APP_SLUG; not merging"
+            exit 1
+          fi
+          unexpected=$(gh pr view "$BRANCH" --json files -q '.files[].path' | grep -vxF -f <(printf '%s\n' \
+            .claude-plugin/plugin.json .codex-plugin/plugin.json .github/plugin/plugin.json \
+            .qoder-plugin/plugin.json .release-please-manifest.json CHANGELOG.md) || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::release PR changes unexpected files, not merging:"
+            echo "$unexpected"
+            exit 1
+          fi
+          gh pr merge "$BRANCH" --squash --admin
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          BRANCH: release-please--branches--main
