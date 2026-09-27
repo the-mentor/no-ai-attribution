@@ -88,6 +88,12 @@ class CheckAttribution(unittest.TestCase):
                 "cd sub && git commit -F only-here.txt",
                 f"git -C {sub} commit -F only-here.txt",
                 f"cd {d} && cd sub && git commit -F only-here.txt",
+                # Shell separators glued to the path.
+                "git commit -F msg.txt; echo done",
+                "git commit -F msg.txt&& echo done",
+                "git commit --file=msg.txt|cat",
+                "gh pr create --title x --body-file msg.txt;",
+                f"cd {sub};git commit -F only-here.txt",
             ]
             allowed = ["git commit -F clean.md", "git commit -F missing.txt"]
             for cmd in blocked:

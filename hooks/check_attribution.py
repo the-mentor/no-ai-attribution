@@ -38,8 +38,11 @@ def referenced_files(command, cwd):
     """(directory, path) pairs for the files the command reads its message from
     (`-F msg.txt`, `body=@file`). Tracks `cd` and `git -C` so relative paths
     resolve where the command actually runs."""
+    # punctuation_chars splits `;`, `&&`, `|` off paths (`-F msg.txt;`).
+    lex = shlex.shlex(command, posix=True, punctuation_chars=True)
+    lex.whitespace_split = True
     try:
-        tokens = shlex.split(command)
+        tokens = list(lex)
     except ValueError:
         tokens = command.split()
     dirs, found = [cwd], []
