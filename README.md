@@ -62,7 +62,7 @@ agent was told or forgot.
 | Where | Examples |
 |---|---|
 | **Git** | `git commit`, `merge`, `tag`, `notes`, `revert`, `cherry-pick`, `rebase`, `am`, even with options like `git -c user.name=… commit` or `git -C dir commit` |
-| **Git identity** | A git write that would record an agent as author or committer, from git config, `GIT_AUTHOR_*` / `GIT_COMMITTER_*`, `-c user.*=` or `--author`. Names like *"Claude Dupont"* still pass |
+| **Git identity** | A git write that would record an agent as author or committer, from git config, `GIT_AUTHOR_*` / `GIT_COMMITTER_*`, `-c user.*=` / `author.*=` / `committer.*=`, `--git-dir` or `--author`. Read-only forms like `git tag -l` and `git rebase --abort` aren't checked. Names like *"Claude Dupont"* still pass |
 | **GitHub CLI** | `gh pr` / `gh issue` create · edit · comment · review · merge, `gh release create/edit`, `gh api` |
 | **Message files** | `-F msg.txt`, `--file`, `--body-file`, `--notes-file`, `field=@file`. It reads the file, following any `cd` in the command |
 | **GitHub MCP tools** | Any GitHub MCP write tool (create PR, comment, push files…). Every text argument is checked |
@@ -164,7 +164,10 @@ untouched.
   agents add automatically.
 - **Identity is checked before git runs.** The hook asks `git var` which
   author and committer git would use. If it can't tell (no git, no identity),
-  the command is allowed. Commits made outside a hooked tool call aren't seen.
+  the command is allowed. Commits made outside a hooked tool call aren't seen,
+  and neither is an identity changed earlier in the same command
+  (`git config user.name … && git commit`) or the original author that
+  `am`, `cherry-pick` and `commit -C` copy over.
 - **Copilot CLI:** only shell commands are checked there. MCP tools aren't
   matched on that host.
 - **No `python3`, no protection.** If the hook can't run, Claude Code and Qoder

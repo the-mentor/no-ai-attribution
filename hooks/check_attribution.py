@@ -43,14 +43,19 @@ ATTRIBUTION = re.compile(
 # Narrower than ATTRIBUTION so "Claude Dupont" or jane@anthropic.com still pass.
 AGENT = r"(?:claude|codex|copilot|cursor|gemini|aider)"
 AI_IDENTITY = re.compile(
-    rf"^\s*{AGENT}(?:[ -]?agent)?\s*(?:<|$)"
+    rf"^\s*(?:github |openai |google )?{AGENT}(?:[ -]?(?:agent|code|cli|code assist))?\s*(?:<|$)"
     rf"|^\s*{AGENT}[\w-]*\[bot\]"
-    r"|<[^>]*(?:noreply@anthropic\.com|noreply@openai\.com|noreply@aider\.chat"
+    r"|<(?:noreply@anthropic\.com|noreply@openai\.com|noreply@aider\.chat"
     r"|cursoragent@cursor\.com|copilot@github\.com"
-    rf"|\b{AGENT}[\w-]*(?:\[bot\])?@users\.noreply\.github\.com)>",
+    rf"|(?:\d+\+)?{AGENT}(?:[\w-]*\[bot\])?@users\.noreply\.github\.com)>",
     re.IGNORECASE,
 )
-IDENTITY_ENV = re.compile(r"GIT_(?:AUTHOR|COMMITTER)_(?:NAME|EMAIL)=")
+# Git subcommands that record an author/committer, and the arguments that make
+# them read-only (`tag -l`, `rebase --abort`, `notes list`).
+IDENTITY_WRITES = {"commit", "merge", "tag", "notes", "revert", "cherry-pick", "rebase", "am"}
+READ_ONLY = {"-l", "--list", "-d", "--delete", "--verify", "--abort", "--quit"}
+# Global git options to pass on to `git var` so it reads the same config.
+GIT_VAR_OPTS = {"-c", "--git-dir", "--work-tree"}
 # Flags whose value is a file holding the message/body.
 FILE_FLAGS = {"-F", "--file", "--body-file", "--notes-file", "--input", "-t", "--template"}
 MCP_READ = {"get", "list", "read", "search"}
@@ -90,36 +95,66 @@ def referenced_files(command, cwd):
     return found
 
 
+def git_writes(command, cwd):
+    """(directory, global options, env, --author values) for each git command
+    in `command` that records an author or committer. Follows `cd` and
+    `export` across the chain; `VAR=x`, `-C` and `--author` apply only to the
+    command they belong to."""
+    env, d, found, segment = dict(os.environ), cwd, [], []
+    for tok in tokenize(command) + [";"]:
+        if not set(tok) <= set("();<>|&"):
+            segment.append(tok)
+            continue
+        seg, segment, local = segment, [], {}
+        if seg[:1] == ["cd"] and len(seg) > 1:
+            d = os.path.join(d, os.path.expanduser(seg[1]))
+            continue
+        persist = seg[:1] == ["export"]
+        seg = seg[1:] if persist or seg[:1] == ["env"] else seg
+        while seg and re.match(r"[A-Za-z_]\w*=", seg[0]):
+            key, value = seg.pop(0).split("=", 1)
+            (env if persist else local)[key] = value
+        if not seg or os.path.basename(seg[0]) != "git":
+            continue
+        gdir, opts, i = d, [], 1
+        while i < len(seg) and seg[i].startswith("-"):
+            name = seg[i].split("=", 1)[0]
+            takes_value = name in GIT_VAR_OPTS | {"-C"} and "=" not in seg[i]
+            value = seg[i + 1] if takes_value and i + 1 < len(seg) else ""
+            if name == "-C":
+                gdir = os.path.join(gdir, os.path.expanduser(value))
+            elif name in GIT_VAR_OPTS:
+                opts += [seg[i], value] if takes_value else [seg[i]]
+            i += 2 if takes_value else 1
+        sub, rest = (seg[i], seg[i + 1:]) if i < len(seg) else ("", [])
+        if sub not in IDENTITY_WRITES or READ_ONLY & set(rest):
+            continue
+        if sub == "notes" and rest[:1] in (["list"], ["show"]):
+            continue
+        authors = [rest[j + 1] for j, a in enumerate(rest[:-1]) if a == "--author"]
+        authors += [a.split("=", 1)[1] for a in rest if a.startswith("--author=")]
+        found.append((gdir, opts, {**env, **local}, authors))
+    return found
+
+
 def identities(command, cwd):
-    """The author/committer identities a git command would record: any
-    `--author`, plus what `git var` resolves from config and env in each
-    directory the command runs in, with the command's own `-c user.*=` and
-    `GIT_AUTHOR_*=` overrides applied."""
-    tokens = tokenize(command)
-    dirs, config, env, found = [cwd], [], dict(os.environ), []
-    for i, tok in enumerate(tokens):
-        nxt = tokens[i + 1] if i + 1 < len(tokens) else ""
-        if nxt and (tok == "cd" or (tok == "-C" and "git" in tokens[:i])):
-            dirs.append(os.path.join(dirs[-1], os.path.expanduser(nxt)))
-        elif tok == "-c" and nxt.lower().startswith("user."):
-            config += ["-c", nxt]
-        elif IDENTITY_ENV.match(tok):
-            key, value = tok.split("=", 1)
-            env[key] = value
-        elif tok == "--author":
-            found.append(nxt)
-        elif tok.startswith("--author="):
-            found.append(tok.split("=", 1)[1])
-    for d in dirs:
-        for var in ("GIT_AUTHOR_IDENT", "GIT_COMMITTER_IDENT"):
-            try:
-                out = subprocess.run(
-                    ["git", *config, "var", var],
-                    cwd=d, env=env, capture_output=True, text=True, timeout=3,
-                ).stdout
-            except (OSError, subprocess.SubprocessError):
-                continue  # no git, no such directory, or too slow: can't tell, allow
-            found.append(out.strip())
+    """The author/committer identities the command's git writes would record:
+    any `--author`, plus what `git var` resolves from config and env where
+    each one runs, with its own `-c`, `--git-dir` and `VAR=` overrides."""
+    found = []
+    for d, opts, env, authors in git_writes(command, cwd):
+        found += authors
+        try:
+            out = subprocess.run(
+                ["git", *opts, "var", "-l"],
+                cwd=d, env=env, capture_output=True, text=True, timeout=3,
+            ).stdout
+        except (OSError, subprocess.SubprocessError):
+            continue  # no git, no such directory, or too slow: can't tell, allow
+        found += [
+            line.split("=", 1)[1] for line in out.splitlines()
+            if line.startswith(("GIT_AUTHOR_IDENT=", "GIT_COMMITTER_IDENT="))
+        ]
     return found
 
 

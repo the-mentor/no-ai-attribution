@@ -14,10 +14,10 @@ AI_EMAIL = "noreply@" + "anthropic.com"
 
 # The hook asks git which identity it would commit as, so pin a human one
 # instead of whatever the machine running the tests has configured.
-_home = tempfile.mkdtemp()
-Path(_home, ".gitconfig").write_text("[user]\n\tname = Jane Doe\n\temail = jane@example.com\n")
+_home = tempfile.TemporaryDirectory()  # removed when the test run exits
+Path(_home.name, ".gitconfig").write_text("[user]\n\tname = Jane Doe\n\temail = jane@example.com\n")
 ENV = {k: v for k, v in os.environ.items() if not k.startswith(("GIT_AUTHOR_", "GIT_COMMITTER_"))}
-ENV.update(GIT_CONFIG_GLOBAL=str(Path(_home, ".gitconfig")), GIT_CONFIG_NOSYSTEM="1")
+ENV.update(GIT_CONFIG_GLOBAL=str(Path(_home.name, ".gitconfig")), GIT_CONFIG_NOSYSTEM="1")
 
 
 def run(command, payload=None, env=None):
@@ -134,6 +134,18 @@ class CheckAttribution(unittest.TestCase):
                 (f"cd {ai} && {clean}", human, None),
                 ("git -C ../ai rebase --exec true main", human, None),
                 ("git am fix.patch", ai, None),
+                ("git -c author.name=Claude commit -m fix", human, None),
+                ("git -c committer.name=Codex commit -m fix", human, None),
+                ("git --git-dir=../ai/.git commit -m fix", human, None),
+                ("GIT_DIR=../ai/.git git commit -m fix", human, None),
+                ('git commit --author="GitHub Copilot <dev@example.com>" -m fix', human, None),
+                ("export GIT_AUTHOR_NAME=Codex && git commit -m fix", human, None),
+                # A later command's VAR= doesn't apply to the earlier commit.
+                (f"{clean}; GIT_AUTHOR_NAME=Jane true", ai, None),
+                # Flags and messages that look read-only don't hide a real commit.
+                ("git commit -v -m fix", ai, None),
+                ("git commit -m show", ai, None),
+                ("/usr/bin/git commit -m fix", ai, None),
             ]
             allowed = [
                 (clean, human, None),
@@ -145,6 +157,18 @@ class CheckAttribution(unittest.TestCase):
                 (clean, Path(d), None),  # not a repo: falls back to the human global identity
                 ("git log", ai, None),
                 ("gh pr create --title x --body y", ai, None),
+                # Only the repo the git write runs in counts, not where it starts.
+                (f"cd {human} && {clean}", ai, None),
+                (f"git -C {human} commit -m fix", ai, None),
+                # Reads, aborts and lookalike words record no identity.
+                ("git tag -l", ai, None),
+                ("git rebase --abort", ai, None),
+                ("git merge --abort", ai, None),
+                ("git notes list", ai, None),
+                ("git checkout -b am-fix", ai, None),
+                ('git log --grep "I am"', ai, None),
+                (f"git log --author=Claude && {clean}", human, None),
+                ('git commit --author="Jane <claudette@users.noreply.github.com>" -m fix', human, None),
             ]
             for cmd, cwd, env in blocked + allowed:
                 with self.subTest(cmd=cmd, cwd=cwd.name, env=env):
