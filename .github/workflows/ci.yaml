@@ -8,11 +8,12 @@ permissions:
 
 jobs:
   test:
-    name: Unit tests (${{ matrix.python }})
-    runs-on: ubuntu-latest
+    name: Unit tests (${{ matrix.os }}, ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest]
         # Every CPython version still supported upstream:
         # https://devguide.python.org/versions/
         python: ['3.10', '3.11', '3.12', '3.13', '3.14']
