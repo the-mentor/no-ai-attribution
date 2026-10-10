@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -9,12 +10,21 @@ ROOT = Path(__file__).resolve().parent.parent
 HOOK = ROOT / "hooks" / "check_attribution.py"
 TRAILER = "Co-Authored-By: " + "Claude <noreply@" + "anthropic.com>"
 FOOTER = "Generated with " + "Claude Code"
+AI_EMAIL = "noreply@" + "anthropic.com"
+
+# The hook asks git which identity it would commit as, so pin a human one
+# instead of whatever the machine running the tests has configured.
+_home = tempfile.mkdtemp()
+Path(_home, ".gitconfig").write_text("[user]\n\tname = Jane Doe\n\temail = jane@example.com\n")
+ENV = {k: v for k, v in os.environ.items() if not k.startswith(("GIT_AUTHOR_", "GIT_COMMITTER_"))}
+ENV.update(GIT_CONFIG_GLOBAL=str(Path(_home, ".gitconfig")), GIT_CONFIG_NOSYSTEM="1")
 
 
-def run(command, payload=None):
+def run(command, payload=None, env=None):
     payload = json.dumps(payload or {"tool_input": {"command": command}})
     return subprocess.run(
-        [sys.executable, HOOK], input=payload, capture_output=True, text=True
+        [sys.executable, HOOK], input=payload, capture_output=True, text=True,
+        env={**ENV, **(env or {})},
     )
 
 
@@ -102,6 +112,47 @@ class CheckAttribution(unittest.TestCase):
             for cmd in allowed:
                 with self.subTest(cmd=cmd):
                     self.assertEqual(run_tool("Bash", {"command": cmd}, cwd=d).returncode, 0)
+
+    def test_git_identity(self):
+        with tempfile.TemporaryDirectory() as d:
+            human, ai = Path(d, "human"), Path(d, "ai")
+            for repo, name, email in ((human, "Jane Doe", "jane@example.com"), (ai, "Claude", AI_EMAIL)):
+                subprocess.run(["git", "init", "-q", repo], check=True, env=ENV)
+                subprocess.run(["git", "-C", repo, "config", "user.name", name], check=True, env=ENV)
+                subprocess.run(["git", "-C", repo, "config", "user.email", email], check=True, env=ENV)
+            clean = 'git commit -m "fix"'
+            blocked = [
+                (clean, ai, None),
+                (clean, human, {"GIT_AUTHOR_NAME": "Claude", "GIT_AUTHOR_EMAIL": AI_EMAIL}),
+                (clean, human, {"GIT_COMMITTER_EMAIL": AI_EMAIL}),
+                ('git -c user.name=Claude commit -m "fix"', human, None),
+                (f"GIT_COMMITTER_NAME=Codex {clean}", human, None),
+                ('git commit --author="Cursor Agent <x@example.com>" -m fix', human, None),
+                ('git commit --author "copilot-swe-agent[bot] <1+copilot-swe-agent[bot]@users.noreply.github.com>" -m fix', human, None),
+                (f"cd {ai} && {clean}", human, None),
+                ("git -C ../ai rebase --exec true main", human, None),
+                ("git am fix.patch", ai, None),
+            ]
+            allowed = [
+                (clean, human, None),
+                ("git -c user.name=Jane -c user.email=jane@example.com commit -m fix", ai, None),
+                ("GIT_AUTHOR_NAME=Jane GIT_COMMITTER_NAME=Jane GIT_AUTHOR_EMAIL=j@example.com "
+                 f"GIT_COMMITTER_EMAIL=j@example.com {clean}", ai, None),
+                ('git commit --author="Claude Dupont <claude@example.com>" -m fix', human, None),
+                (clean, human, {"GIT_AUTHOR_EMAIL": "jane@" + AI_EMAIL.split("@")[1]}),
+                (clean, Path(d), None),  # not a repo: falls back to the human global identity
+                ("git log", ai, None),
+                ("gh pr create --title x --body y", ai, None),
+            ]
+            for cmd, cwd, env in blocked + allowed:
+                with self.subTest(cmd=cmd, cwd=cwd.name, env=env):
+                    payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": str(cwd)}
+                    r = run(None, payload, env)
+                    if (cmd, cwd, env) in blocked:
+                        self.assertEqual(r.returncode, 2)
+                        self.assertIn("git identity", json.loads(r.stderr)["systemMessage"])
+                    else:
+                        self.assertEqual(r.returncode, 0, r.stderr)
 
     def test_github_mcp_tools(self):
         blocked = [

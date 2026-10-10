@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 """PreToolUse hook: block git / gh commands and GitHub MCP write tools whose
-message content mentions Claude, Anthropic, or AI-assistance attribution.
+message content mentions Claude, Anthropic, or AI-assistance attribution, and
+git commits that would record an AI agent as author or committer.
 """
 import json
 import os
 import re
 import shlex
+import subprocess
 import sys
 
 # A git or gh write command. Anything but a command separator may sit between
 # the program and its subcommand (e.g. `git -c user.name=x commit`).
+GIT_WRITE = re.compile(
+    r"\bgit\b[^|;&\n]*?\s(?:commit|merge|tag|notes|revert|cherry-pick|rebase|am)\b"
+)
 COMMIT_LIKE = re.compile(
-    r"\bgit\b[^|;&\n]*?\s(?:commit|merge|tag|notes|revert|cherry-pick)\b"
-    r"|\bgh\b[^|;&\n]*?\s(?:(?:pr|issue)\s+(?:create|edit|comment|review|merge)"
+    GIT_WRITE.pattern
+    + r"|\bgh\b[^|;&\n]*?\s(?:(?:pr|issue)\s+(?:create|edit|comment|review|merge)"
     r"|release\s+(?:create|edit)|api)\b"
 )
 ATTRIBUTION = re.compile(
@@ -33,23 +38,40 @@ ATTRIBUTION = re.compile(
     r"|noreply@openai\.com",
     re.IGNORECASE,
 )
+# An author/committer identity ("Name <email>") that belongs to an agent: the
+# name is just an agent (or its bot account), or the email is an agent address.
+# Narrower than ATTRIBUTION so "Claude Dupont" or jane@anthropic.com still pass.
+AGENT = r"(?:claude|codex|copilot|cursor|gemini|aider)"
+AI_IDENTITY = re.compile(
+    rf"^\s*{AGENT}(?:[ -]?agent)?\s*(?:<|$)"
+    rf"|^\s*{AGENT}[\w-]*\[bot\]"
+    r"|<[^>]*(?:noreply@anthropic\.com|noreply@openai\.com|noreply@aider\.chat"
+    r"|cursoragent@cursor\.com|copilot@github\.com"
+    rf"|\b{AGENT}[\w-]*(?:\[bot\])?@users\.noreply\.github\.com)>",
+    re.IGNORECASE,
+)
+IDENTITY_ENV = re.compile(r"GIT_(?:AUTHOR|COMMITTER)_(?:NAME|EMAIL)=")
 # Flags whose value is a file holding the message/body.
 FILE_FLAGS = {"-F", "--file", "--body-file", "--notes-file", "--input", "-t", "--template"}
 MCP_READ = {"get", "list", "read", "search"}
 MAX_FILE_BYTES = 1_000_000
 
 
-def referenced_files(command, cwd):
-    """(directory, path) pairs for the files the command reads its message from
-    (`-F msg.txt`, `body=@file`). Tracks `cd` and `git -C` so relative paths
-    resolve where the command actually runs."""
+def tokenize(command):
     # punctuation_chars splits `;`, `&&`, `|` off paths (`-F msg.txt;`).
     lex = shlex.shlex(command, posix=True, punctuation_chars=True)
     lex.whitespace_split = True
     try:
-        tokens = list(lex)
+        return list(lex)
     except ValueError:
-        tokens = command.split()
+        return command.split()
+
+
+def referenced_files(command, cwd):
+    """(directory, path) pairs for the files the command reads its message from
+    (`-F msg.txt`, `body=@file`). Tracks `cd` and `git -C` so relative paths
+    resolve where the command actually runs."""
+    tokens = tokenize(command)
     dirs, found = [cwd], []
     for i, tok in enumerate(tokens):
         nxt = tokens[i + 1] if i + 1 < len(tokens) else ""
@@ -66,6 +88,48 @@ def referenced_files(command, cwd):
         if path and path != "-":
             found += [(d, path) for d in dirs]
     return found
+
+
+def identities(command, cwd):
+    """The author/committer identities a git command would record: any
+    `--author`, plus what `git var` resolves from config and env in each
+    directory the command runs in, with the command's own `-c user.*=` and
+    `GIT_AUTHOR_*=` overrides applied."""
+    tokens = tokenize(command)
+    dirs, config, env, found = [cwd], [], dict(os.environ), []
+    for i, tok in enumerate(tokens):
+        nxt = tokens[i + 1] if i + 1 < len(tokens) else ""
+        if nxt and (tok == "cd" or (tok == "-C" and "git" in tokens[:i])):
+            dirs.append(os.path.join(dirs[-1], os.path.expanduser(nxt)))
+        elif tok == "-c" and nxt.lower().startswith("user."):
+            config += ["-c", nxt]
+        elif IDENTITY_ENV.match(tok):
+            key, value = tok.split("=", 1)
+            env[key] = value
+        elif tok == "--author":
+            found.append(nxt)
+        elif tok.startswith("--author="):
+            found.append(tok.split("=", 1)[1])
+    for d in dirs:
+        for var in ("GIT_AUTHOR_IDENT", "GIT_COMMITTER_IDENT"):
+            try:
+                out = subprocess.run(
+                    ["git", *config, "var", var],
+                    cwd=d, env=env, capture_output=True, text=True, timeout=3,
+                ).stdout
+            except (OSError, subprocess.SubprocessError):
+                continue  # no git, no such directory, or too slow: can't tell, allow
+            found.append(out.strip())
+    return found
+
+
+def ai_identity(data, args):
+    """The agent identity a git write would record, or None."""
+    command = args.get("command", "") if isinstance(args, dict) else ""
+    if not isinstance(command, str) or not GIT_WRITE.search(command):
+        return None
+    cwd = str(data.get("cwd") or os.getcwd())
+    return next((i for i in identities(command, cwd) if AI_IDENTITY.search(i)), None)
 
 
 def read(cwd, path):
@@ -115,14 +179,21 @@ def main():
             args = {"command": args}
 
     text = text_to_check(data, args)
-    if not text or not ATTRIBUTION.search(text):
+    if text and ATTRIBUTION.search(text):
+        message = (
+            "Blocked: this command contains AI-assistant attribution (e.g. a "
+            "Co-authored-by trailer or 'Generated with' footer), which is not "
+            "allowed in commits, PRs, and issues. Remove the attribution and retry."
+        )
+    elif ident := ai_identity(data, args):
+        message = (
+            f"Blocked: git would record an AI assistant as author or committer "
+            f"({''.join(ident.partition('>')[:2])}). Set the user's own git identity (git config "
+            f"user.name / user.email, or GIT_AUTHOR_* / GIT_COMMITTER_*) and retry."
+        )
+    else:
         return 0
 
-    message = (
-        "Blocked: this command contains AI-assistant attribution (e.g. a "
-        "Co-authored-by trailer or 'Generated with' footer), which is not "
-        "allowed in commits, PRs, and issues. Remove the attribution and retry."
-    )
     if "toolArgs" in data:  # Copilot CLI reads the decision from stdout
         print(json.dumps({"permissionDecision": "deny", "permissionDecisionReason": message}))
     print(
