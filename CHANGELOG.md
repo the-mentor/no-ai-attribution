@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.12](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.11...v0.2.12) (2026-10-10)
+
+
+### Bug Fixes
+
+* block commits that record an AI agent as author or committer ([#31](https://github.com/the-mentor/no-ai-attribution/issues/31)) ([c08d8b1](https://github.com/the-mentor/no-ai-attribution/commit/c08d8b134d71caf4ef23834e11effb1a60f058c2))
+
 ## [0.2.11](https://github.com/the-mentor/no-ai-attribution/compare/v0.2.10...v0.2.11) (2026-10-10)
 
 
