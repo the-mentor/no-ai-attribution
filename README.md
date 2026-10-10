@@ -70,8 +70,8 @@ agent was told or forgot.
 
 | Agent | What gets caught |
 |---|---|
-| **Claude Code** | `Co-Authored-By: Claude`, *"Generated with Claude Code"*, `claude.com/claude-code`, `noreply@anthropic.com`, mentions of Anthropic or Claude Code |
-| **OpenAI Codex** | `Co-Authored-By: Codex`, *"Generated with Codex"*, `noreply@openai.com`, mentions of OpenAI Codex |
+| **Claude Code** | `Co-Authored-By: Claude`, *"Generated with/by Claude"*, `claude.com/claude-code`, `noreply@anthropic.com`, mentions of Anthropic or Claude Code |
+| **OpenAI Codex** | `Co-Authored-By: Codex`, *"Generated with/by Codex"*, `noreply@openai.com`, mentions of OpenAI Codex |
 | **GitHub Copilot** | `Co-authored-by: Copilot`, and its `Copilot@users.noreply.github.com`, `Copilot[bot]@users.noreply.github.com`, and `copilot@github.com` addresses |
 | **Cursor** | `Co-authored-by: Cursor`, `cursoragent@cursor.com` |
 | **Gemini** | `Co-authored-by: Gemini`, `gemini-code-assist[bot]` |
