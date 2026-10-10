@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -9,20 +10,54 @@ ROOT = Path(__file__).resolve().parent.parent
 HOOK = ROOT / "hooks" / "check_attribution.py"
 TRAILER = "Co-Authored-By: " + "Claude <noreply@" + "anthropic.com>"
 FOOTER = "Generated with " + "Claude Code"
+AI_EMAIL = "noreply@" + "anthropic.com"
+
+# Git config the hook sees: a human identity, whatever the machine running the
+# tests is configured with (an agent's sandbox may well have an AI identity).
+_home = tempfile.mkdtemp()
+GITCONFIG = Path(_home) / "gitconfig"
+GITCONFIG.write_text("[user]\n\tname = Test Human\n\temail = human@example.com\n")
+ENV = {
+    k: v for k, v in os.environ.items()
+    if not k.startswith(("GIT_AUTHOR_", "GIT_COMMITTER_", "GIT_CONFIG"))
+}
+ENV.update(GIT_CONFIG_GLOBAL=str(GITCONFIG), GIT_CONFIG_NOSYSTEM="1")
 
 
-def run(command, payload=None):
+def run(command, payload=None, env=None):
     payload = json.dumps(payload or {"tool_input": {"command": command}})
     return subprocess.run(
-        [sys.executable, HOOK], input=payload, capture_output=True, text=True
+        [sys.executable, HOOK], input=payload, capture_output=True, text=True,
+        env={**ENV, **(env or {})},
     )
 
 
-def run_tool(tool, args, cwd=None):
+def run_tool(tool, args, cwd=None, env=None):
     payload = {"tool_name": tool, "tool_input": args}
     if cwd:
         payload["cwd"] = cwd
-    return run(None, payload)
+    return run(None, payload, env)
+
+
+def git(directory, *args, env=None):
+    subprocess.run(
+        ["git", *args], cwd=directory, check=True, capture_output=True,
+        env={**ENV, **(env or {})},
+    )
+
+
+def repo(directory, name="Test Human", email="human@example.com"):
+    git(os.path.dirname(directory), "init", "-q", "-b", "main", directory)
+    git(directory, "config", "user.name", name)
+    git(directory, "config", "user.email", email)
+    return directory
+
+
+def commit(directory, message="change", env=None):
+    path = Path(directory) / "file.txt"
+    path.write_text(path.read_text() + "x" if path.exists() else "x")
+    git(directory, "add", "file.txt")
+    git(directory, "commit", "-q", "-m", message, env=env)
 
 
 class CheckAttribution(unittest.TestCase):
@@ -209,6 +244,130 @@ class CheckAttribution(unittest.TestCase):
                 text = (ROOT / "hooks" / f).read_text()
                 json.loads(text)
                 self.assertIn("/hooks/check_attribution.py", text)
+
+
+
+class GitIdentity(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.human = repo(os.path.join(self.tmp.name, "human"))
+        self.ai = repo(os.path.join(self.tmp.name, "ai"), "Claude", AI_EMAIL)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def assertBlocked(self, cmd, cwd, env=None):
+        r = run_tool("Bash", {"command": cmd}, cwd=cwd, env=env)
+        self.assertEqual(r.returncode, 2, r.stderr)
+        return json.loads(r.stderr)["systemMessage"]
+
+    def assertAllowed(self, cmd, cwd, env=None):
+        r = run_tool("Bash", {"command": cmd}, cwd=cwd, env=env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_blocks_ai_identity_from_config(self):
+        for cmd in [
+            'git commit -m "fix"',
+            "git commit --amend --no-edit",
+            "git merge topic",
+            "git rebase main",
+            "git am fix.patch",
+            "git cherry-pick abc123",
+            'git tag -a v1 -m "v1"',
+        ]:
+            with self.subTest(cmd=cmd):
+                message = self.assertBlocked(cmd, self.ai)
+                self.assertIn("author or committer", message)
+                self.assertIn("git config user.name", message)
+
+    def test_follows_cd_and_git_C(self):
+        self.assertBlocked(f'cd {self.ai} && git commit -m "fix"', self.human)
+        self.assertBlocked(f'git -C {self.ai} commit -m "fix"', self.human)
+        self.assertAllowed(f'git -C {self.human} commit -m "fix"', self.ai)
+
+    def test_blocks_ai_identity_from_environment(self):
+        for var in ("GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"):
+            with self.subTest(var=var):
+                self.assertBlocked('git commit -m "fix"', self.human, {var: "Claude"})
+        self.assertBlocked('git commit -m "fix"', self.human, {"GIT_AUTHOR_EMAIL": AI_EMAIL})
+
+    def test_blocks_ai_identity_in_command(self):
+        for cmd in [
+            'git -c user.name=Claude commit -m "fix"',
+            'GIT_AUTHOR_NAME=Claude git commit -m "fix"',
+            'git commit --author="Claude <bot@example.com>" -m "fix"',
+            'git commit --author "copilot-swe-agent[bot] <1+copilot-swe-agent[bot]@users.noreply.github.com>" -m "fix"',
+            'git commit --author="Jane Doe (aider) <jane@example.com>" -m "fix"',
+            'git commit --author="Cursor Agent <jane@example.com>" -m "fix"',
+        ]:
+            with self.subTest(cmd=cmd):
+                self.assertBlocked(cmd, self.human)
+
+    def test_command_can_override_an_ai_config(self):
+        cmd = 'git -c user.name=Jane -c user.email=jane@example.com commit -m "fix"'
+        self.assertAllowed(cmd, self.ai)
+        # Only the author is overridden; the committer is still the AI.
+        self.assertBlocked('git commit --author="Jane <jane@example.com>" -m "fix"', self.ai)
+
+    def test_allows_human_identities(self):
+        for name in ["Test Human", "Claude Dupont", "Gemini Lopez", "Codexa"]:
+            with self.subTest(name=name):
+                git(self.human, "config", "user.name", name)
+                self.assertAllowed('git commit -m "fix"', self.human)
+
+    def test_only_git_writes_are_checked(self):
+        for cmd in ["git status", "git log", 'gh pr create --title x --body "adds tests"']:
+            with self.subTest(cmd=cmd):
+                self.assertAllowed(cmd, self.ai)
+
+    def test_no_repo_or_no_identity(self):
+        plain = os.path.join(self.tmp.name, "plain")
+        os.makedirs(plain)
+        self.assertAllowed('git commit -m "fix"', plain)
+        self.assertAllowed(
+            'git commit -m "fix"', self.human, {"GIT_CONFIG_GLOBAL": os.devnull}
+        )
+
+
+class GitPush(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        origin = os.path.join(self.tmp.name, "origin.git")
+        git(self.tmp.name, "init", "-q", "--bare", origin)
+        self.repo = repo(os.path.join(self.tmp.name, "work"))
+        git(self.repo, "remote", "add", "origin", origin)
+        commit(self.repo)
+        git(self.repo, "push", "-q", "-u", "origin", "main")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def push(self, cmd="git push"):
+        return run_tool("Bash", {"command": cmd}, cwd=self.repo)
+
+    def test_allows_clean_unpushed_commits(self):
+        commit(self.repo, "fix parser")
+        self.assertEqual(self.push().returncode, 0)
+
+    def test_blocks_unpushed_ai_identity(self):
+        ai = {"GIT_AUTHOR_NAME": "Claude", "GIT_AUTHOR_EMAIL": AI_EMAIL}
+        commit(self.repo, "fix parser", env=ai)
+        commit(self.repo, "later clean commit")
+        for cmd in ["git push", "git push -u origin main", f"cd {self.repo} && git push"]:
+            with self.subTest(cmd=cmd):
+                r = self.push(cmd)
+                self.assertEqual(r.returncode, 2)
+                self.assertIn("unpushed commit", json.loads(r.stderr)["systemMessage"])
+
+    def test_blocks_unpushed_attribution_trailer(self):
+        commit(self.repo, f"fix parser\n\n{TRAILER}")
+        self.assertEqual(self.push().returncode, 2)
+
+    def test_ignores_commits_already_on_a_remote(self):
+        commit(self.repo, f"old\n\n{TRAILER}")
+        git(self.repo, "push", "-q")
+        commit(self.repo, "fix parser")
+        self.assertEqual(self.push().returncode, 0)
 
 
 if __name__ == "__main__":

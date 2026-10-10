@@ -61,7 +61,9 @@ agent was told or forgot.
 
 | Where | Examples |
 |---|---|
-| **Git** | `git commit`, `merge`, `tag`, `notes`, `revert`, `cherry-pick`, even with options like `git -c user.name=… commit` or `git -C dir commit` |
+| **Git** | `git commit`, `merge`, `tag`, `notes`, `revert`, `cherry-pick`, `rebase`, `am`, even with options like `git -c user.name=… commit` or `git -C dir commit` |
+| **Git identity** | The author and committer those commands would record, from git config, `GIT_AUTHOR_*` / `GIT_COMMITTER_*`, `-c user.name=…` or `--author`. A clean message doesn't help if the commit is authored as `Claude <noreply@anthropic.com>` |
+| **Git push** | Commits on the current branch that no remote has yet, checked for AI identities and attribution in their messages. A backstop for commits made where the hook couldn't see them |
 | **GitHub CLI** | `gh pr` / `gh issue` create · edit · comment · review · merge, `gh release create/edit`, `gh api` |
 | **Message files** | `-F msg.txt`, `--file`, `--body-file`, `--notes-file`, `field=@file`. It reads the file, following any `cd` in the command |
 | **GitHub MCP tools** | Any GitHub MCP write tool (create PR, comment, push files…). Every text argument is checked |
@@ -80,6 +82,11 @@ agent was told or forgot.
 For Copilot, Cursor, Gemini, and Aider, the name only counts as a
 co-author trailer, so ordinary commits like *"fix Cursor keybinding"* or
 *"bump gemini SDK"* go through.
+
+**Identities it blocks:** any identity with one of the addresses above, a
+name that is *only* an agent's name (`Claude`, `Codex`, `Cursor Agent`…), an
+agent bot account (`copilot-swe-agent[bot]`, `claude[bot]`…), and aider's
+`Jane Doe (aider)`. A person called *Claude Dupont* commits as usual.
 
 ## 🚀 Install
 
@@ -149,9 +156,12 @@ flowchart LR
 
 The hook reads the tool call the agent is about to make. If it's a git or
 GitHub write, it scans the full command line, any message files it
-references, and (for MCP tools) every string argument. A match returns
-`permissionDecision: deny` with exit code 2. Anything else passes through
-untouched.
+references, and (for MCP tools) every string argument. For git writes it
+also asks git which identity it would record (`git var GIT_AUTHOR_IDENT` /
+`GIT_COMMITTER_IDENT`, in the directory the command runs in), and for
+`git push` it reads the commits about to go out (`git log HEAD --not
+--remotes`). A match returns `permissionDecision: deny` with exit code 2.
+Anything else passes through untouched.
 
 ## ⚠️ Good to know
 
@@ -161,6 +171,10 @@ untouched.
 - **It targets defaults, not adversaries.** Deliberately disguised text
   (`Cl""aude`, `$(printf …)`) isn't detected. The goal is stopping the footers
   agents add automatically.
+- **`git push` checks the current branch.** It looks at `HEAD`'s commits that
+  no remote-tracking branch has yet (up to 200), not at whatever refspec the
+  push names. Commits already on a remote are never re-checked, so existing
+  history doesn't block you.
 - **Copilot CLI:** only shell commands are checked there. MCP tools aren't
   matched on that host.
 - **No `python3`, no protection.** If the hook can't run, Claude Code and Qoder
